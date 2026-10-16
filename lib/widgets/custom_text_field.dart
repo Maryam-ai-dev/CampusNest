@@ -107,6 +107,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
               horizontal: 16,
               vertical: 15,
             ),
+            // main colrs
             border: _border(AppColors.border),
             enabledBorder: _border(AppColors.border),
             disabledBorder: _border(AppColors.border),

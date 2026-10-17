@@ -309,6 +309,7 @@ class AuthService {
       );
     }
   }
+<<<<<<< HEAD
 // ---------- Forgot Password & Forgot Email ----------
 
   /// User ko password reset email bhejta hai
@@ -361,6 +362,9 @@ class AuthService {
     }
   }
       
+=======
+
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
   // ---------- Google ----------
 
   /// [role] is 'student' (default) or 'owner'; it only matters for new users.

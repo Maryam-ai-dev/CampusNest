@@ -114,6 +114,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                             autofillHints: const [AutofillHints.email],
                             enabled: !_busy,
                           ),
+<<<<<<< HEAD
                           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -178,6 +179,8 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               ),
             ),
           ),
+=======
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
                           const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Password',
@@ -190,6 +193,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                             enabled: !_busy,
                             onSubmitted: _logIn,
                           ),
+<<<<<<< HEAD
                           Align(
   alignment: Alignment.centerRight,
   child: TextButton(
@@ -227,6 +231,8 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     ),
   ),
 )
+=======
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
                         ],
                       ),
                     ),

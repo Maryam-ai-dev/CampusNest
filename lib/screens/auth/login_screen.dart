@@ -10,9 +10,12 @@ import '../../widgets/google_button.dart';
 import '../../widgets/primary_button.dart';
 import 'owner_login_screen.dart';
 import 'signup_screen.dart';
+<<<<<<< HEAD
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../student/student_shell.dart';
 import '../admin/admin_dashboard_screen.dart';
+=======
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
   }
 
+<<<<<<< HEAD
   // Single unified login function with admin routing
   Future<void> _logIn([String? value]) async {
     if (!_formKey.currentState!.validate()) return;
@@ -117,6 +121,20 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       _showError('Login failed: $e');
+=======
+  Future<void> _logIn() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.signInWithEmail(
+        email: _emailCtrl.text,
+        password: _passwordCtrl.text,
+      );
+      // AuthGate in app.dart switches to the home screen automatically.
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -167,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             autofillHints: const [AutofillHints.email],
                             enabled: !_busy,
                           ),
+<<<<<<< HEAD
                           // --- Forgot Email Button ---
                           Align(
                             alignment: Alignment.centerRight,
@@ -232,6 +251,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
+=======
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
                           const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Password',
@@ -244,6 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             enabled: !_busy,
                             onSubmitted: _logIn,
                           ),
+<<<<<<< HEAD
                           // --- Forgot Password Button ---
                           Align(
                             alignment: Alignment.centerRight,
@@ -280,6 +302,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
+=======
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
                         ],
                       ),
                     ),
@@ -327,4 +351,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf

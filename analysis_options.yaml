@@ -8,6 +8,11 @@
 # The following line activates a set of recommended lints for Flutter apps,
 # packages, and plugins designed to encourage good coding practices.
 analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
 exclude:
     - build/**
     - android/**

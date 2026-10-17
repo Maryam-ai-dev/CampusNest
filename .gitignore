@@ -1,4 +1,9 @@
+?env file
+.env
+
 # Miscellaneous
+
+
 *.class
 *.log
 *.pyc

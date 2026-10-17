@@ -128,6 +128,7 @@ class AuthService {
         'Could not save your profile. Check your connection and retry.',
       );
     }
+    return null;
   }
 
   /// For Google users who signed in from an owner screen and have no profile yet.
@@ -151,6 +152,7 @@ class AuthService {
         'Could not save your profile. Check your connection and retry.',
       );
     }
+    return null;
   }
 
   // ---------- Email / password ----------
@@ -201,6 +203,7 @@ class AuthService {
     } catch (_) {
       throw const AuthException('Something went wrong. Please try again.');
     }
+    return null;
   }
 
   Future<void> signUpOwnerWithEmail({
@@ -247,6 +250,7 @@ class AuthService {
     } catch (_) {
       throw const AuthException('Something went wrong. Please try again.');
     }
+    return null;
   }
 
   Future<UserCredential> signInWithEmail({
@@ -273,6 +277,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_messageFor(e));
     }
+    return null;
   }
 
   Future<bool> reloadAndCheckVerified() async {
@@ -308,8 +313,8 @@ class AuthService {
         'Could not delete the account. Please try again.',
       );
     }
+    return null;
   }
-<<<<<<< HEAD
 // ---------- Forgot Password & Forgot Email ----------
 
   /// User ko password reset email bhejta hai
@@ -321,6 +326,7 @@ class AuthService {
     } catch (_) {
       throw const AuthException('Could not send password reset email. Please try again.');
     }
+    return null;
   }
 
  /// Username ya phone number ke zariye user ka email dhoondne ke liye (Forgot Email)
@@ -362,9 +368,6 @@ class AuthService {
     }
   }
       
-=======
-
->>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
   // ---------- Google ----------
 
   /// [role] is 'student' (default) or 'owner'; it only matters for new users.
@@ -399,6 +402,7 @@ class AuthService {
       await GoogleSignIn.instance.signOut();
     }
     await _auth.signOut();
+    return null;
   }
 
   String _messageFor(FirebaseAuthException e) {

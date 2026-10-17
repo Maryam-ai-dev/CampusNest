@@ -9,10 +9,7 @@ import 'screens/auth/verify_email_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'services/auth_service.dart';
-<<<<<<< HEAD
 import 'screens/admin/admin_dashboard_screen.dart';
-=======
->>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
 
 class CampusNestApp extends StatelessWidget {
   const CampusNestApp({super.key});
@@ -84,14 +81,11 @@ class _ProfileGateState extends State<_ProfileGate> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     // 1. Direct check for your specific admin email at the root level
     if (widget.user.email == 'admincampustnest@gmail.com') {
       return const AdminDashboardScreen();
     }
 
-=======
->>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
     return FutureBuilder<String?>(
       future: _future,
       builder: (context, snapshot) {
@@ -120,12 +114,8 @@ class _ProfileGateState extends State<_ProfileGate> {
           );
         }
         final role = snapshot.data;
-<<<<<<< HEAD
-        
         // 2. Fallback check for admin role from database
         if (role == 'admin') return const AdminDashboardScreen();
-=======
->>>>>>> b0070f17671e62dad7f87406ba2e23427541efcf
         if (role == null) return CompleteProfileScreen(onDone: _recheck);
         if (role == 'owner') return const _OwnerHomePlaceholder();
         return const StudentShell();

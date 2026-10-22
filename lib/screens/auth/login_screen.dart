@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/user_role.dart';
 import '../../core/utils/validators.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/auth_back_button.dart';
 import '../../widgets/auth_footer_link.dart';
 import '../../widgets/auth_header.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/google_button.dart';
 import '../../widgets/primary_button.dart';
-import 'owner_login_screen.dart';
 import 'signup_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../student/student_shell.dart';
-import '../admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.role = UserRole.resident});
+
+  final UserRole role;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -50,73 +50,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
   }
 
-  // Single unified login function with admin routing
   Future<void> _logIn([String? value]) async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
-
     try {
-      // 1. Sign in with Firebase Authentication
-      final credential = await AuthService.instance.signInWithEmail(
-        email: _emailCtrl.text.trim(),
+      await AuthService.instance.signInWithEmail(
+        email: _emailCtrl.text,
         password: _passwordCtrl.text,
       );
-
       if (!mounted) return;
-
-      final email = _emailCtrl.text.trim();
-
-      // 2. Check for your specific admin email
-      if (email == 'admincampustnest@gmail.com') {
-        try {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(credential.user!.uid)
-              .set({'role': 'admin'}, SetOptions(merge: true));
-        } catch (_) {
-          // Ignore if Firestore setup restricts this
-        }
-
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-        );
-        return;
-      }
-
-      // 3. Check role from Firestore for other users
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .get();
-
-        final role = userDoc.data()?['role'];
-
-        if (!mounted) return;
-
-        if (role == 'admin') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-          );
-          return;
-        }
-      } catch (_) {
-        // Fallback if Firestore read fails
-      }
-
-      if (!mounted) return;
-      // Default redirection for students
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const StudentShell()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showError('Login failed: $e');
+      // Back to the AuthGate, which shows verify / profile / home by role.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -126,7 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _isGoogleLoading = true);
     try {
-      await AuthService.instance.signInWithGoogle();
+      final result = await AuthService.instance.signInWithGoogle(
+        role: widget.role.value,
+      );
+      if (!mounted) return;
+      if (result != null) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } on AuthException catch (e) {
       if (mounted) _showError(e.message);
     } finally {
@@ -147,7 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 8),
+                    const AuthBackButton(),
+                    const SizedBox(height: 16),
                     const AuthHeader(
                       title: 'Welcome back',
                       subtitle: 'Log in to find your hostel & mess',
@@ -158,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         children: [
                           CustomTextField(
-                            label: 'University email',
-                            hint: 'you@university.edu.pk',
+                            label: 'Email',
+                            hint: 'you@example.com',
                             controller: _emailCtrl,
                             validator: Validators.email,
                             keyboardType: TextInputType.emailAddress,
@@ -186,7 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
@@ -194,28 +150,43 @@ class _LoginScreenState extends State<LoginScreen> {
                                             if (input.trim().isEmpty) return;
                                             Navigator.pop(context);
                                             try {
-                                              String? foundEmail = await AuthService.instance.findEmailByUsernameOrPhone(
-                                                input.trim(),
-                                              );
+                                              String?
+                                              foundEmail = await AuthService
+                                                  .instance
+                                                  .findEmailByUsernameOrPhone(
+                                                    input.trim(),
+                                                  );
                                               if (!context.mounted) return;
                                               if (foundEmail != null) {
                                                 _emailCtrl.text = foundEmail;
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   SnackBar(
-                                                    content: Text('Email found: $foundEmail (Set in the email field)'),
+                                                    content: Text(
+                                                      'Email found: $foundEmail (Set in the email field)',
+                                                    ),
                                                   ),
                                                 );
                                               } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   const SnackBar(
-                                                    content: Text('No email found with this username or phone number.'),
+                                                    content: Text(
+                                                      'No email found with this username or phone number.',
+                                                    ),
                                                   ),
                                                 );
                                               }
                                             } catch (e) {
                                               if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Error: $e')),
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error: $e'),
+                                                ),
                                               );
                                             }
                                           },
@@ -228,7 +199,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                               child: const Text(
                                 'Forgot Email?',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -252,19 +226,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (_emailCtrl.text.trim().isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Please enter your email address above first, then tap Forgot Password.'),
+                                      content: Text(
+                                        'Please enter your email address above first, then tap Forgot Password.',
+                                      ),
                                     ),
                                   );
                                   return;
                                 }
                                 try {
-                                  await AuthService.instance.sendPasswordResetEmail(
-                                    email: _emailCtrl.text.trim(),
-                                  );
+                                  await AuthService.instance
+                                      .sendPasswordResetEmail(
+                                        email: _emailCtrl.text.trim(),
+                                      );
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Password reset email sent! Check your inbox.'),
+                                      content: Text(
+                                        'Password reset email sent! Check your inbox.',
+                                      ),
                                     ),
                                   );
                                 } catch (e) {
@@ -276,7 +255,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                               child: const Text(
                                 'Forgot Password?',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -303,17 +285,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       action: 'Sign up',
                       fontSize: 15,
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SignupScreen()),
-                      ),
-                    ),
-                    AuthFooterLink(
-                      prefix: 'Listing a hostel or mess? ',
-                      action: 'Continue as Owner →',
-                      actionColor: AppColors.textDark,
-                      fontSize: 14,
-                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const OwnerLoginScreen(),
+                          builder: (_) => SignupScreen(role: widget.role),
                         ),
                       ),
                     ),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/constants/user_role.dart';
 
 const _usernameTaken =
     'That username is already taken. Please try another one.';
@@ -26,8 +27,9 @@ class AuthService {
   Future<void>? _googleInit;
 
   /// Role chosen on the screen the person used for Google sign-in
-  /// ('student' or 'owner'). CompleteProfileScreen reads it for new Google users.
-  String _pendingRole = 'student';
+  /// ('resident', 'owner' or 'mess_provider'). CompleteProfileScreen reads it
+  /// for new Google users.
+  String _pendingRole = UserRole.resident.value;
   String get pendingRole => _pendingRole;
 
   Future<void> _ensureGoogleInitialized() {
@@ -54,11 +56,13 @@ class AuthService {
     return doc.exists;
   }
 
-  /// Saved role ('student', 'owner', ...) or null if there is no profile yet.
+  /// Saved role ('resident', 'owner', 'mess_provider', 'admin') or null if
+  /// there is no profile yet. Old documents saved as 'student' are read as
+  /// residents by UserRole.fromValue.
   Future<String?> getRole(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     if (!doc.exists) return null;
-    return (doc.data()?['role'] as String?) ?? 'student';
+    return (doc.data()?['role'] as String?) ?? UserRole.resident.value;
   }
 
   /// Claims the username and creates the profile in ONE atomic batch.
@@ -76,15 +80,16 @@ class AuthService {
       'name': name.trim(),
       'username': username,
       'email': email.trim().toLowerCase(),
-      'role': 'student',
+      'role': UserRole.resident.value,
       'createdAt': FieldValue.serverTimestamp(),
     });
     return batch.commit();
   }
 
-  /// Owners have no username: just their profile document.
-  Future<void> _createOwnerProfile(
+  /// Owners and mess providers have no username: just their profile document.
+  Future<void> _createBusinessProfile(
     User user, {
+    required String role,
     required String businessName,
     required String phone,
     required String email,
@@ -95,13 +100,13 @@ class AuthService {
       'businessName': businessName.trim(),
       'phone': phone.replaceAll(RegExp(r'[\s-]'), ''),
       'email': email.trim().toLowerCase(),
-      'role': 'owner',
+      'role': role,
       'verified': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// For Google users who have no profile yet (students).
+  /// For Google users who have no profile yet (residents).
   Future<void> completeProfile({required String username}) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -128,11 +133,30 @@ class AuthService {
         'Could not save your profile. Check your connection and retry.',
       );
     }
-    return null;
   }
 
   /// For Google users who signed in from an owner screen and have no profile yet.
   Future<void> completeOwnerProfile({
+    required String businessName,
+    required String phone,
+  }) => _completeBusinessProfile(
+    role: UserRole.owner.value,
+    businessName: businessName,
+    phone: phone,
+  );
+
+  /// Same, for Google users who signed in from a mess provider screen.
+  Future<void> completeMessProviderProfile({
+    required String businessName,
+    required String phone,
+  }) => _completeBusinessProfile(
+    role: UserRole.messProvider.value,
+    businessName: businessName,
+    phone: phone,
+  );
+
+  Future<void> _completeBusinessProfile({
+    required String role,
     required String businessName,
     required String phone,
   }) async {
@@ -141,8 +165,9 @@ class AuthService {
       throw const AuthException('You are signed out. Please log in again.');
     }
     try {
-      await _createOwnerProfile(
+      await _createBusinessProfile(
         user,
+        role: role,
         businessName: businessName,
         phone: phone,
         email: user.email ?? '',
@@ -152,7 +177,6 @@ class AuthService {
         'Could not save your profile. Check your connection and retry.',
       );
     }
-    return null;
   }
 
   // ---------- Email / password ----------
@@ -203,10 +227,36 @@ class AuthService {
     } catch (_) {
       throw const AuthException('Something went wrong. Please try again.');
     }
-    return null;
   }
 
   Future<void> signUpOwnerWithEmail({
+    required String businessName,
+    required String phone,
+    required String email,
+    required String password,
+  }) => _signUpBusinessWithEmail(
+    role: UserRole.owner.value,
+    businessName: businessName,
+    phone: phone,
+    email: email,
+    password: password,
+  );
+
+  Future<void> signUpMessProviderWithEmail({
+    required String businessName,
+    required String phone,
+    required String email,
+    required String password,
+  }) => _signUpBusinessWithEmail(
+    role: UserRole.messProvider.value,
+    businessName: businessName,
+    phone: phone,
+    email: email,
+    password: password,
+  );
+
+  Future<void> _signUpBusinessWithEmail({
+    required String role,
     required String businessName,
     required String phone,
     required String email,
@@ -220,8 +270,9 @@ class AuthService {
       final user = cred.user!;
 
       try {
-        await _createOwnerProfile(
+        await _createBusinessProfile(
           user,
+          role: role,
           businessName: businessName,
           phone: phone,
           email: email,
@@ -250,7 +301,6 @@ class AuthService {
     } catch (_) {
       throw const AuthException('Something went wrong. Please try again.');
     }
-    return null;
   }
 
   Future<UserCredential> signInWithEmail({
@@ -277,7 +327,6 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_messageFor(e));
     }
-    return null;
   }
 
   Future<bool> reloadAndCheckVerified() async {
@@ -292,7 +341,7 @@ class AuthService {
   }
 
   /// Used by "Wrong email? Start over": removes profile, frees the username
-  /// (students only), then deletes the auth account.
+  /// (residents only), then deletes the auth account.
   Future<void> deleteCurrentAccount() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -313,9 +362,9 @@ class AuthService {
         'Could not delete the account. Please try again.',
       );
     }
-    return null;
   }
-// ---------- Forgot Password & Forgot Email ----------
+
+  // ---------- Forgot Password & Forgot Email ----------
 
   /// User ko password reset email bhejta hai
   Future<void> sendPasswordResetEmail({required String email}) async {
@@ -324,12 +373,13 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_messageFor(e));
     } catch (_) {
-      throw const AuthException('Could not send password reset email. Please try again.');
+      throw const AuthException(
+        'Could not send password reset email. Please try again.',
+      );
     }
-    return null;
   }
 
- /// Username ya phone number ke zariye user ka email dhoondne ke liye (Forgot Email)
+  /// Username ya phone number ke zariye user ka email dhoondne ke liye (Forgot Email)
   Future<String?> findEmailByUsernameOrPhone(String input) async {
     try {
       final trimmed = input.trim();
@@ -362,17 +412,19 @@ class AuthService {
     } on AuthException {
       rethrow;
     } on FirebaseException {
-      throw const AuthException('Could not retrieve email. Check your connection.');
+      throw const AuthException(
+        'Could not retrieve email. Check your connection.',
+      );
     } catch (_) {
       throw const AuthException('Something went wrong. Please try again.');
     }
   }
-      
+
   // ---------- Google ----------
 
-  /// [role] is 'student' (default) or 'owner'; it only matters for new users.
-  /// Returns null if the user cancelled the Google dialog.
-  Future<UserCredential?> signInWithGoogle({String role = 'student'}) async {
+  /// [role] is 'resident' (default), 'owner' or 'mess_provider'; it only
+  /// matters for new users. Returns null if the user cancelled the Google dialog.
+  Future<UserCredential?> signInWithGoogle({String role = 'resident'}) async {
     _pendingRole = role;
     try {
       await _ensureGoogleInitialized();
@@ -402,7 +454,6 @@ class AuthService {
       await GoogleSignIn.instance.signOut();
     }
     await _auth.signOut();
-    return null;
   }
 
   String _messageFor(FirebaseAuthException e) {

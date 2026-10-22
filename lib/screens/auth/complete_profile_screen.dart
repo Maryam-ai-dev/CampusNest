@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/user_role.dart';
 import '../../core/utils/validators.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_footer_link.dart';
 import '../../widgets/auth_header.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/mess_auth_header.dart';
 import '../../widgets/owner_auth_header.dart';
 import '../../widgets/primary_button.dart';
 
 /// Shown once to Google users who don't have a profile yet.
-/// Students pick a username; owners enter business name and phone.
+/// Residents pick a username; owners and mess providers enter business
+/// name and phone.
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key, required this.onDone});
 
@@ -27,7 +30,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _phoneCtrl = TextEditingController();
   bool _isLoading = false;
 
-  bool get _isOwner => AuthService.instance.pendingRole == 'owner';
+  String get _role => AuthService.instance.pendingRole;
+  bool get _isMess => _role == UserRole.messProvider.value;
+
+  /// Owners and mess providers share the same form (business name + phone).
+  bool get _isBusiness => _role == UserRole.owner.value || _isMess;
 
   @override
   void dispose() {
@@ -42,11 +49,18 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
     try {
-      if (_isOwner) {
-        await AuthService.instance.completeOwnerProfile(
-          businessName: _businessCtrl.text,
-          phone: _phoneCtrl.text,
-        );
+      if (_isBusiness) {
+        if (_isMess) {
+          await AuthService.instance.completeMessProviderProfile(
+            businessName: _businessCtrl.text,
+            phone: _phoneCtrl.text,
+          );
+        } else {
+          await AuthService.instance.completeOwnerProfile(
+            businessName: _businessCtrl.text,
+            phone: _phoneCtrl.text,
+          );
+        }
       } else {
         await AuthService.instance.completeProfile(
           username: _usernameCtrl.text,
@@ -71,7 +85,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final owner = _isOwner;
+    final business = _isBusiness;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -84,7 +98,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 32),
-                    if (owner)
+                    if (_isMess)
+                      const MessAuthHeader(
+                        title: 'Almost there',
+                        subtitle: 'Add your details to start listing your mess',
+                      )
+                    else if (business)
                       const OwnerAuthHeader(
                         title: 'Almost there',
                         subtitle: 'Add your details to start listing',
@@ -92,17 +111,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     else
                       const AuthHeader(
                         title: 'Pick a username',
-                        subtitle: 'This is how other students will see you',
+                        subtitle: 'This is how other residents will see you',
                       ),
                     const SizedBox(height: 36),
                     Form(
                       key: _formKey,
-                      child: owner
+                      child: business
                           ? Column(
                               children: [
                                 CustomTextField(
-                                  label: 'Owner / business name',
-                                  hint: 'Al-Noor Boys Hostel',
+                                  label: _isMess
+                                      ? 'Mess / business name'
+                                      : 'Owner / business name',
+                                  hint: _isMess
+                                      ? 'Al-Noor Mess'
+                                      : 'Al-Noor Boys Hostel',
                                   controller: _businessCtrl,
                                   validator: Validators.businessName,
                                   keyboardType: TextInputType.name,

@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/constants/app_colors.dart';
+import 'core/constants/user_role.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/complete_profile_screen.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/auth/role_selection_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'services/auth_service.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
 
 class CampusNestApp extends StatelessWidget {
   const CampusNestApp({super.key});
@@ -30,10 +31,10 @@ class CampusNestApp extends StatelessWidget {
   }
 }
 
-/// signed out -> Login
+/// signed out -> Role selection
 /// signed in, email not verified -> Verify email
 /// verified, no profile (Google users) -> Pick a username / owner details
-/// verified + profile -> Home
+/// verified + profile -> Home for the saved role
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -51,7 +52,7 @@ class _AuthGateState extends State<AuthGate> {
           return const _Loading();
         }
         final user = AuthService.instance.currentUser;
-        if (user == null) return const LoginScreen();
+        if (user == null) return const RoleSelectionScreen();
         if (!user.emailVerified) {
           return VerifyEmailScreen(onVerified: () => setState(() {}));
         }
@@ -81,11 +82,6 @@ class _ProfileGateState extends State<_ProfileGate> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Direct check for your specific admin email at the root level
-    if (widget.user.email == 'admincampustnest@gmail.com') {
-      return const AdminDashboardScreen();
-    }
-
     return FutureBuilder<String?>(
       future: _future,
       builder: (context, snapshot) {
@@ -113,12 +109,23 @@ class _ProfileGateState extends State<_ProfileGate> {
             ),
           );
         }
-        final role = snapshot.data;
-        // 2. Fallback check for admin role from database
-        if (role == 'admin') return const AdminDashboardScreen();
-        if (role == null) return CompleteProfileScreen(onDone: _recheck);
-        if (role == 'owner') return const _OwnerHomePlaceholder();
-        return const StudentShell();
+
+        final raw = snapshot.data;
+        // No profile document yet (new Google users).
+        if (raw == null) return CompleteProfileScreen(onDone: _recheck);
+
+        // Role comes only from Firestore. Legacy 'student' maps to resident.
+        final role = UserRole.fromValue(raw);
+        if (role == UserRole.admin) return const AdminDashboardScreen();
+        if (role == UserRole.owner) {
+          return const _HomePlaceholder(title: 'Owner dashboard coming soon');
+        }
+        if (role == UserRole.messProvider) {
+          return const _HomePlaceholder(
+            title: 'Mess provider dashboard coming soon',
+          );
+        }
+        return const StudentShell(); // resident (and any unknown value)
       },
     );
   }
@@ -132,9 +139,11 @@ class _Loading extends StatelessWidget {
       const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
-/// Temporary owner screen until the owner dashboard is built.
-class _OwnerHomePlaceholder extends StatelessWidget {
-  const _OwnerHomePlaceholder();
+/// Temporary home for owners and mess providers until their dashboards exist.
+class _HomePlaceholder extends StatelessWidget {
+  const _HomePlaceholder({required this.title});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +154,7 @@ class _OwnerHomePlaceholder extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Owner dashboard coming soon\n${user?.displayName ?? user?.email ?? ''}',
+              '$title\n${user?.displayName ?? user?.email ?? ''}',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

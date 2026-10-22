@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/user_role.dart';
 import '../../core/utils/validators.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/auth_back_button.dart';
 import '../../widgets/auth_footer_link.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/google_button.dart';
@@ -12,7 +14,9 @@ import '../../widgets/primary_button.dart';
 import 'owner_login_screen.dart';
 
 class OwnerSignupScreen extends StatefulWidget {
-  const OwnerSignupScreen({super.key});
+  const OwnerSignupScreen({super.key, this.role = UserRole.owner});
+
+  final UserRole role;
 
   @override
   State<OwnerSignupScreen> createState() => _OwnerSignupScreenState();
@@ -78,7 +82,9 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _isGoogleLoading = true);
     try {
-      final result = await AuthService.instance.signInWithGoogle(role: 'owner');
+      final result = await AuthService.instance.signInWithGoogle(
+        role: widget.role.value,
+      );
       if (!mounted) return;
       if (result != null) {
         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -103,7 +109,9 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
+                    const AuthBackButton(),
+                    const SizedBox(height: 16),
                     const OwnerAuthHeader(
                       title: 'Owner Sign Up',
                       subtitle: 'Create your account to list a hostel',
@@ -211,18 +219,9 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
                       fontSize: 15,
                       onTap: () => Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (_) => const OwnerLoginScreen(),
+                          builder: (_) => OwnerLoginScreen(role: widget.role),
                         ),
                       ),
-                    ),
-                    AuthFooterLink(
-                      prefix: 'Looking for a hostel instead? ',
-                      action: 'Continue as Student →',
-                      actionColor: AppColors.textDark,
-                      fontSize: 14,
-                      onTap: () => Navigator.of(
-                        context,
-                      ).popUntil((route) => route.isFirst),
                     ),
                     const SizedBox(height: 20),
                   ],

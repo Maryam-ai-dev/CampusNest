@@ -16,6 +16,7 @@ import '../../widgets/section_header.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/subscription_card.dart';
 import 'owner_placeholder_screen.dart';
+import 'add_hostel_listing_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key, this.repository});
@@ -108,8 +109,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   void _openAddListing() {
     // TODO(add-listing chat): replace with AddListingScreen.
-    _push(const OwnerPlaceholderScreen(title: 'Add New Listing'));
-  }
+    _push(const AddHostelListingScreen());
+}
 
   void _openNotifications() {
     // TODO(notifications): replace with NotificationsScreen.
